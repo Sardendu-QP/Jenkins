@@ -1,0 +1,69 @@
+pipeline {
+    agent any
+    stages {
+        stage('Install Python') {
+            steps {
+                script {
+                    // Check if Python is installed by using the full path
+                    def pythonInstalled = bat(script: '"C:\\Program Files (x86)\\Python39-32\\python.exe" --version', returnStatus: true) == 0
+                    if (!pythonInstalled) {
+                        echo 'Python not found. Installing Python...'
+                        // Download and install Python if it's not found
+                        bat """
+                            powershell -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.9.9/python-3.9.9.exe' -OutFile 'python_installer.exe'"
+                            start /wait python_installer.exe /quiet InstallAllUsers=1 PrependPath=1
+                            del python_installer.exe
+                        """
+                        echo 'Python installation complete.'
+                    } else {
+                        echo 'Python is already installed.'
+                    }
+                }
+            }
+        }
+
+        stage('Set Python Path') {
+            steps {
+                script {
+                    echo 'Setting Python and pip paths for the current session...'
+                    // Modify the PATH for the current session using an environment variable
+                    def path = "C:\\Program Files (x86)\\Python39-32\\;C:\\Program Files (x86)\\Python39-32\\Scripts\\"
+                    env.PATH = path + ";" + env.PATH
+                }
+            }
+        }
+
+        stage('Ensure pip is installed') {
+            steps {
+                script {
+                    // Check if pip is installed
+                    def pipInstalled = bat(script: '"C:\\Program Files (x86)\\Python39-32\\Scripts\\pip.exe" --version', returnStatus: true) == 0
+                    if (!pipInstalled) {
+                        echo 'pip not found. Installing pip...'
+                        // Ensure pip is installed using Python `ensurepip`
+                        bat '"C:\\Program Files (x86)\\Python39-32\\python.exe" -m ensurepip --upgrade'
+                        echo 'pip installation complete.'
+                    } else {
+                        echo 'pip is already installed.'
+                    }
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                echo 'Installing dependencies...'
+                // Install required dependencies like selenium and requests
+                bat '"C:\\Program Files (x86)\\Python39-32\\Scripts\\pip.exe" install selenium requests'
+            }
+        }
+
+        stage('Run Selenium and Dastardly') {
+            steps {
+                echo 'Running Selenium login and Dastardly scan...'
+                // Run the Selenium script using Python
+                bat '"C:\\Program Files (x86)\\Python39-32\\python.exe" C:\\Users\\Admi\\Documents\\RnD\\Jenkins_Script\\Windows\\selenim-jenkins.py'
+            }
+        }
+    }
+}
